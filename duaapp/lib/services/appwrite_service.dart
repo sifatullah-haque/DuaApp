@@ -167,16 +167,13 @@ class AppwriteService {
           'reference': reference,
           'moodIds': moodIds,
           'status': 'pending', // Set default status
-          // Removed 'userEmail' since it's not in the collection schema
-          // Removed 'createdAt' since Appwrite handles this automatically with $createdAt
+          'userId': user.$id, // Keep this - userId should be string type in Appwrite
         },
         permissions: [
           Permission.read(Role.user(user.$id)),
           Permission.update(Role.user(user.$id)),
           Permission.delete(Role.user(user.$id)),
-          Permission.read(Role.label('admin')),
-          Permission.update(Role.label('admin')),
-          Permission.delete(Role.label('admin')),
+          Permission.read(Role.any()), // Allow public read access for approved quotes
         ],
       );
       return {
@@ -192,18 +189,36 @@ class AppwriteService {
 
   Future<Map<String, dynamic>> getUserQuotes() async {
     try {
-      final user = await account.get();
       final response = await databases.listDocuments(
         databaseId: databaseId,
         collectionId: quotesCollectionId,
         queries: [
-          // Remove userId query since we're using permissions instead
+          Query.equal('status', 'approved'), // Only get approved quotes
           Query.orderDesc('\$createdAt'),
         ],
       );
       return {'success': true, 'quotes': response.documents};
     } catch (e) {
       print('Get user quotes error: $e');
+      return {'success': false, 'message': _getErrorMessage(e.toString())};
+    }
+  }
+
+  // Add new method to get current user's own quotes (for profile management)
+  Future<Map<String, dynamic>> getCurrentUserQuotes() async {
+    try {
+      final user = await account.get();
+      final response = await databases.listDocuments(
+        databaseId: databaseId,
+        collectionId: quotesCollectionId,
+        queries: [
+          Query.equal('userId', user.$id), // Get only current user's quotes
+          Query.orderDesc('\$createdAt'),
+        ],
+      );
+      return {'success': true, 'quotes': response.documents};
+    } catch (e) {
+      print('Get current user quotes error: $e');
       return {'success': false, 'message': _getErrorMessage(e.toString())};
     }
   }

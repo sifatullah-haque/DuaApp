@@ -784,7 +784,12 @@ class _AdminTabState extends State<AdminTab> with TickerProviderStateMixin {
       });
 
       widget.onQuotesUpdated();
-      _showSnackBar('$successCount quotes ${action}d successfully!');
+      final actionMessage = action == 'approve' 
+          ? '$successCount quotes approved successfully! They are now visible to all users.'
+          : action == 'reject'
+          ? '$successCount quotes rejected successfully! They will not be visible to users.'
+          : '$successCount quotes deleted successfully!';
+      _showSnackBar(actionMessage);
     }
   }
 
@@ -865,7 +870,7 @@ class _AdminTabState extends State<AdminTab> with TickerProviderStateMixin {
     if (mounted) {
       if (result['success']) {
         widget.onQuotesUpdated();
-        _showSnackBar('Quote approved successfully!');
+        _showSnackBar('Quote approved successfully! It is now visible to all users.');
       } else {
         _showSnackBar(result['message'], isError: true);
       }
@@ -879,7 +884,7 @@ class _AdminTabState extends State<AdminTab> with TickerProviderStateMixin {
     if (mounted) {
       if (result['success']) {
         widget.onQuotesUpdated();
-        _showSnackBar('Quote rejected successfully!');
+        _showSnackBar('Quote rejected successfully! It will not be visible to users.');
       } else {
         _showSnackBar(result['message'], isError: true);
       }

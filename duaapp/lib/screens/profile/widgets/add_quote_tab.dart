@@ -67,7 +67,7 @@ class _AddQuoteTabState extends State<AddQuoteTab> {
       if (result['success']) {
         _clearForm();
         widget.onQuoteAdded();
-        _showSnackBar('Quote submitted successfully for review!');
+        _showSnackBar('Quote submitted successfully for review! It will be visible to all users once approved by admin.');
       } else {
         _showSnackBar(result['message'], isError: true);
       }
