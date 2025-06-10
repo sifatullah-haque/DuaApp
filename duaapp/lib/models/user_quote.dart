@@ -6,8 +6,11 @@ class UserQuote {
   final String? arabicText;
   final String? englishText;
   final String reference;
-  final DateTime createdAt;
   final List<String> moodIds;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final String status;
+  final String? userEmail;
 
   UserQuote({
     required this.id,
@@ -15,21 +18,25 @@ class UserQuote {
     this.arabicText,
     this.englishText,
     required this.reference,
-    required this.createdAt,
     required this.moodIds,
+    required this.createdAt,
+    required this.updatedAt,
+    this.status = 'pending',
+    this.userEmail,
   });
 
-  factory UserQuote.fromMap(dynamic data) {
+  factory UserQuote.fromMap(Map<String, dynamic> map) {
     return UserQuote(
-      id: data.$id,
-      bengaliText: data.data['bengaliText'] ?? '',
-      arabicText: data.data['arabicText'],
-      englishText: data.data['englishText'],
-      reference: data.data['reference'] ?? '',
-      createdAt: DateTime.parse(data.$createdAt),
-      moodIds: data.data['moodIds'] != null
-          ? List<String>.from(data.data['moodIds'])
-          : [],
+      id: map['\$id'] as String,
+      bengaliText: map['bengaliText'] as String,
+      arabicText: map['arabicText'] as String?,
+      englishText: map['englishText'] as String?,
+      reference: map['reference'] as String,
+      moodIds: List<String>.from(map['moodIds'] ?? []),
+      createdAt: DateTime.parse(map['\$createdAt'] as String),
+      updatedAt: DateTime.parse(map['\$updatedAt'] as String),
+      status: map['status'] as String? ?? 'pending',
+      userEmail: map['userEmail'] as String?,
     );
   }
 
@@ -41,9 +48,24 @@ class UserQuote {
       englishText: document.data['englishText'],
       reference: document.data['reference'] ?? '',
       createdAt: DateTime.parse(document.$createdAt),
+      updatedAt: DateTime.parse(document.$updatedAt),
       moodIds: document.data['moodIds'] != null
           ? List<String>.from(document.data['moodIds'])
           : [],
+      status: document.data['status'] ?? 'pending',
+      userEmail: document.data['userEmail'],
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'bengaliText': bengaliText,
+      'arabicText': arabicText,
+      'englishText': englishText,
+      'reference': reference,
+      'moodIds': moodIds,
+      'status': status,
+      'userEmail': userEmail,
+    };
   }
 }

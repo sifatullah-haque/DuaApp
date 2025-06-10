@@ -166,11 +166,17 @@ class AppwriteService {
           'englishText': englishText,
           'reference': reference,
           'moodIds': moodIds,
+          'status': 'pending', // Set default status
+          'userEmail': user.email,
+          // Removed 'createdAt' since Appwrite handles this automatically with $createdAt
         },
         permissions: [
-          Permission.read(Role.user(user.$id)), // Only user can read
-          Permission.update(Role.user(user.$id)), // Only user can update
-          Permission.delete(Role.user(user.$id)), // Only user can delete
+          Permission.read(Role.user(user.$id)),
+          Permission.update(Role.user(user.$id)),
+          Permission.delete(Role.user(user.$id)),
+          Permission.read(Role.label('admin')),
+          Permission.update(Role.label('admin')),
+          Permission.delete(Role.label('admin')),
         ],
       );
       return {
@@ -293,34 +299,95 @@ class AppwriteService {
     }
   }
 
+  // Admin Methods
+  Future<Map<String, dynamic>> getAllQuotes() async {
+    try {
+      final response = await databases.listDocuments(
+        databaseId: databaseId,
+        collectionId: quotesCollectionId,
+        queries: [
+          Query.orderDesc('\$createdAt'),
+          Query.limit(100), // Limit for performance
+        ],
+      );
+      return {'success': true, 'quotes': response.documents};
+    } catch (e) {
+      print('Get all quotes error: $e');
+      return {'success': false, 'message': _getErrorMessage(e.toString())};
+    }
+  }
+
+  Future<Map<String, dynamic>> updateQuoteStatus(
+    String quoteId,
+    String status,
+  ) async {
+    try {
+      await databases.updateDocument(
+        databaseId: databaseId,
+        collectionId: quotesCollectionId,
+        documentId: quoteId,
+        data: {
+          'status': status,
+          // Removed 'updatedAt' since it's not in the collection schema
+        },
+      );
+
+      return {'success': true, 'message': 'Quote status updated successfully'};
+    } catch (e) {
+      print('Update quote status error: $e');
+      String errorMessage = 'Failed to update quote status';
+
+      if (e.toString().contains('Unknown attribute: "status"')) {
+        errorMessage =
+            'Database structure error: Please add the "status" attribute to your quotes collection in Appwrite console.\n\n'
+            'Steps:\n'
+            '1. Go to your Appwrite console\n'
+            '2. Navigate to your quotes collection\n'
+            '3. Add a new string attribute named "status"\n'
+            '4. Set default value to "pending"\n'
+            '5. Set size to 20 characters';
+      } else if (e.toString().contains('Unknown attribute: "updatedAt"')) {
+        errorMessage = 'Database structure error: The updatedAt field is not configured in your collection.';
+      }
+
+      return {'success': false, 'message': errorMessage};
+    }
+  }
+
   String _getErrorMessage(String error) {
     print('Processing error message: $error');
 
     // More specific error handling with explicit error codes
-    if (error.contains('401') || error.contains('Invalid credentials') ||
+    if (error.contains('401') ||
+        error.contains('Invalid credentials') ||
         error.contains('invalid-credentials')) {
       return 'Invalid email or password';
-    } else if (error.contains('409') || error.contains('user_already_exists') ||
+    } else if (error.contains('409') ||
+        error.contains('user_already_exists') ||
         error.contains('user-already-exists')) {
       return 'User with this email already exists';
-    } else if (error.contains('400') && error.contains('document_invalid_structure')) {
+    } else if (error.contains('400') &&
+        error.contains('document_invalid_structure')) {
       return 'Database structure error. Please contact support.';
     } else if (error.contains('invalid-password') ||
-              (error.contains('password') && error.contains('length'))) {
+        (error.contains('password') && error.contains('length'))) {
       return 'Password must be at least 8 characters';
     } else if (error.contains('invalid-email')) {
       return 'Please enter a valid email address';
-    } else if (error.contains('network') || error.contains('NetworkException') ||
-              error.contains('connection')) {
+    } else if (error.contains('network') ||
+        error.contains('NetworkException') ||
+        error.contains('connection')) {
       return 'Network error. Please check your connection';
-    } else if (error.contains('403') || error.contains('user-unauthorized') ||
-              error.contains('unauthorized')) {
+    } else if (error.contains('403') ||
+        error.contains('user-unauthorized') ||
+        error.contains('unauthorized')) {
       return 'Authentication service not properly configured';
     } else if (error.contains('429') || error.contains('rate-limit')) {
       return 'Too many attempts. Please try again later';
     } else if (error.contains('404') || error.contains('not-found')) {
       return 'Resource not found. Please check your request.';
-    } else if (error.contains('permission-denied') || error.contains('insufficient-permissions')) {
+    } else if (error.contains('permission-denied') ||
+        error.contains('insufficient-permissions')) {
       return 'You do not have permission to perform this action.';
     }
 

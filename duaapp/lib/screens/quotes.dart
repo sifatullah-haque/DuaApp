@@ -19,6 +19,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
   int currentQuoteIndex = 0;
   PageController pageController = PageController();
   List<UserQuote> userQuotes = [];
+  List<Map<String, String>> allQuotes = [];
   bool isLoadingUserQuotes = false;
 
   @override
@@ -33,6 +34,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
       ),
     );
     _loadUserQuotesByMood();
+    _combineQuotes();
   }
 
   Future<void> _loadUserQuotesByMood() async {
@@ -46,11 +48,47 @@ class _QuotesScreenState extends State<QuotesScreen> {
     if (mounted && result['success']) {
       setState(() {
         userQuotes = (result['quotes'] as List)
-            .map((quote) => UserQuote.fromMap(quote))
+            .map((quote) => UserQuote.fromMap(quote.data ?? {}))
             .toList();
         isLoadingUserQuotes = false;
       });
+      _combineQuotes();
+    } else {
+      setState(() {
+        isLoadingUserQuotes = false;
+      });
     }
+  }
+
+  void _combineQuotes() {
+    // Combine default quotes with user quotes
+    List<Map<String, String>> combined = [];
+
+    // Add default quotes
+    for (int i = 0; i < widget.selectedMood.quotes.length; i++) {
+      combined.add({
+        'type': 'default',
+        'arabic': widget.selectedMood.arabicQuotes[i],
+        'bengali': widget.selectedMood.banglaQuotes[i],
+        'english': widget.selectedMood.quotes[i],
+        'reference': 'Quran & Hadith',
+      });
+    }
+
+    // Add approved user quotes
+    for (UserQuote userQuote in userQuotes) {
+      combined.add({
+        'type': 'user',
+        'arabic': userQuote.arabicText ?? '',
+        'bengali': userQuote.bengaliText,
+        'english': userQuote.englishText ?? '',
+        'reference': userQuote.reference,
+      });
+    }
+
+    setState(() {
+      allQuotes = combined;
+    });
   }
 
   @override
@@ -61,8 +99,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
 
   void nextQuote() {
     setState(() {
-      currentQuoteIndex =
-          (currentQuoteIndex + 1) % widget.selectedMood.quotes.length;
+      currentQuoteIndex = (currentQuoteIndex + 1) % allQuotes.length;
     });
     pageController.animateToPage(
       currentQuoteIndex,
@@ -74,7 +111,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
   void previousQuote() {
     setState(() {
       currentQuoteIndex = currentQuoteIndex == 0
-          ? widget.selectedMood.quotes.length - 1
+          ? allQuotes.length - 1
           : currentQuoteIndex - 1;
     });
     pageController.animateToPage(
@@ -120,7 +157,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                   children: [
                     SizedBox(height: 8.h),
 
-                    // Header Section - Made smaller and responsive
+                    // Header Section
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16.w),
                       child: Container(
@@ -183,6 +220,27 @@ class _QuotesScreenState extends State<QuotesScreen> {
                                 ],
                               ),
                             ),
+
+                            // Quote counter
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 8.w,
+                                vertical: 4.h,
+                              ),
+                              decoration: BoxDecoration(
+                                color: widget.selectedMood.accentColor
+                                    .withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8.r),
+                              ),
+                              child: Text(
+                                '${currentQuoteIndex + 1}/${allQuotes.length}',
+                                style: TextStyle(
+                                  color: widget.selectedMood.accentColor,
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -190,190 +248,260 @@ class _QuotesScreenState extends State<QuotesScreen> {
 
                     SizedBox(height: 16.h),
 
-                    // Main Quote Container - More space allocated
+                    // Main Quote Container
                     Expanded(
                       child: Padding(
                         padding: EdgeInsets.symmetric(horizontal: 16.w),
-                        child: PageView.builder(
-                          controller: pageController,
-                          onPageChanged: (index) {
-                            setState(() {
-                              currentQuoteIndex =
-                                  index % widget.selectedMood.quotes.length;
-                            });
-                          },
-                          itemBuilder: (context, index) {
-                            final quoteIndex =
-                                index % widget.selectedMood.quotes.length;
-                            return Container(
-                              decoration:
-                                  AppTheme.getMoodGlassMorphicDecoration(
-                                    widget.selectedMood.accentColor,
-                                  ),
-                              padding: EdgeInsets.all(20.w),
-                              child: SingleChildScrollView(
+                        child: isLoadingUserQuotes
+                            ? Center(
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    // Arabic Quote
-                                    Container(
-                                      width: double.infinity,
-                                      padding: EdgeInsets.all(18.w),
-                                      decoration: BoxDecoration(
-                                        color: widget.selectedMood.primaryColor
-                                            .withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(
-                                          16.r,
-                                        ),
-                                        border: Border.all(
-                                          color: widget.selectedMood.accentColor
-                                              .withOpacity(0.3),
-                                        ),
-                                      ),
-                                      child: Column(
-                                        children: [
-                                          Text(
-                                            'Arabic | العربية',
-                                            style: TextStyle(
-                                              color: widget
-                                                  .selectedMood
-                                                  .accentColor,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 12.sp,
-                                            ),
-                                          ),
-                                          SizedBox(height: 12.h),
-                                          Text(
-                                            widget
-                                                .selectedMood
-                                                .arabicQuotes[quoteIndex],
-                                            style: TextStyle(
-                                              color: AppTheme.whiteText,
-                                              height: 1.8,
-                                              fontSize: 16.sp,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                            textDirection: TextDirection.rtl,
-                                          ),
-                                        ],
-                                      ),
+                                    CircularProgressIndicator(
+                                      color: widget.selectedMood.accentColor,
                                     ),
-
-                                    SizedBox(height: 18.h),
-
-                                    // Bangla Quote
-                                    Container(
-                                      width: double.infinity,
-                                      padding: EdgeInsets.all(18.w),
-                                      decoration: BoxDecoration(
-                                        color: widget.selectedMood.lightColor
-                                            .withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(
-                                          16.r,
-                                        ),
-                                        border: Border.all(
-                                          color: widget.selectedMood.accentColor
-                                              .withOpacity(0.3),
-                                        ),
+                                    SizedBox(height: 12.h),
+                                    Text(
+                                      'Loading quotes...',
+                                      style: TextStyle(
+                                        color: AppTheme.whiteText,
+                                        fontSize: 12.sp,
                                       ),
-                                      child: Column(
-                                        children: [
-                                          Text(
-                                            'Bengali | বাংলা',
-                                            style: TextStyle(
-                                              color: widget
-                                                  .selectedMood
-                                                  .accentColor,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 12.sp,
-                                            ),
-                                          ),
-                                          SizedBox(height: 12.h),
-                                          Text(
-                                            widget
-                                                .selectedMood
-                                                .banglaQuotes[quoteIndex],
-                                            style: TextStyle(
-                                              color: AppTheme.whiteText,
-                                              height: 1.6,
-                                              fontSize: 14.sp,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-
-                                    SizedBox(height: 18.h),
-
-                                    // English Quote
-                                    Container(
-                                      width: double.infinity,
-                                      padding: EdgeInsets.all(18.w),
-                                      decoration: BoxDecoration(
-                                        color: widget.selectedMood.darkColor
-                                            .withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(
-                                          16.r,
-                                        ),
-                                        border: Border.all(
-                                          color: widget.selectedMood.accentColor
-                                              .withOpacity(0.3),
-                                        ),
-                                      ),
-                                      child: Column(
-                                        children: [
-                                          Text(
-                                            'English',
-                                            style: TextStyle(
-                                              color: widget
-                                                  .selectedMood
-                                                  .accentColor,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 12.sp,
-                                            ),
-                                          ),
-                                          SizedBox(height: 12.h),
-                                          Text(
-                                            widget
-                                                .selectedMood
-                                                .quotes[quoteIndex],
-                                            style: TextStyle(
-                                              color: AppTheme.whiteText,
-                                              height: 1.6,
-                                              fontSize: 14.sp,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-
-                                    SizedBox(height: 16.h),
-
-                                    // Source
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          '- Quran & Hadith',
-                                          style: TextStyle(
-                                            color: AppTheme.whiteText
-                                                .withOpacity(0.7),
-                                            fontStyle: FontStyle.italic,
-                                            fontSize: 10.sp,
-                                          ),
-                                        ),
-                                      ],
                                     ),
                                   ],
                                 ),
+                              )
+                            : allQuotes.isEmpty
+                            ? Center(
+                                child: Text(
+                                  'No quotes available for this mood',
+                                  style: TextStyle(
+                                    color: AppTheme.whiteText.withOpacity(0.7),
+                                    fontSize: 14.sp,
+                                  ),
+                                ),
+                              )
+                            : PageView.builder(
+                                controller: pageController,
+                                onPageChanged: (index) {
+                                  setState(() {
+                                    currentQuoteIndex =
+                                        index % allQuotes.length;
+                                  });
+                                },
+                                itemBuilder: (context, index) {
+                                  final quoteIndex = index % allQuotes.length;
+                                  final quote = allQuotes[quoteIndex];
+
+                                  return Container(
+                                    decoration:
+                                        AppTheme.getMoodGlassMorphicDecoration(
+                                          widget.selectedMood.accentColor,
+                                        ),
+                                    padding: EdgeInsets.all(20.w),
+                                    child: SingleChildScrollView(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          // Quote type indicator
+                                          if (quote['type'] == 'user')
+                                            Container(
+                                              margin: EdgeInsets.only(
+                                                bottom: 12.h,
+                                              ),
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: 8.w,
+                                                vertical: 4.h,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: widget
+                                                    .selectedMood
+                                                    .accentColor
+                                                    .withOpacity(0.2),
+                                                borderRadius:
+                                                    BorderRadius.circular(12.r),
+                                              ),
+                                              child: Text(
+                                                'Community Quote',
+                                                style: TextStyle(
+                                                  color: widget
+                                                      .selectedMood
+                                                      .accentColor,
+                                                  fontSize: 10.sp,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+
+                                          // Arabic Quote
+                                          if (quote['arabic']!.isNotEmpty) ...[
+                                            Container(
+                                              width: double.infinity,
+                                              padding: EdgeInsets.all(18.w),
+                                              decoration: BoxDecoration(
+                                                color: widget
+                                                    .selectedMood
+                                                    .primaryColor
+                                                    .withOpacity(0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(16.r),
+                                                border: Border.all(
+                                                  color: widget
+                                                      .selectedMood
+                                                      .accentColor
+                                                      .withOpacity(0.3),
+                                                ),
+                                              ),
+                                              child: Column(
+                                                children: [
+                                                  Text(
+                                                    'Arabic | العربية',
+                                                    style: TextStyle(
+                                                      color: widget
+                                                          .selectedMood
+                                                          .accentColor,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 12.sp,
+                                                    ),
+                                                  ),
+                                                  SizedBox(height: 12.h),
+                                                  Text(
+                                                    quote['arabic']!,
+                                                    style: TextStyle(
+                                                      color: AppTheme.whiteText,
+                                                      height: 1.8,
+                                                      fontSize: 16.sp,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                    textDirection:
+                                                        TextDirection.rtl,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            SizedBox(height: 18.h),
+                                          ],
+
+                                          // Bengali Quote
+                                          Container(
+                                            width: double.infinity,
+                                            padding: EdgeInsets.all(18.w),
+                                            decoration: BoxDecoration(
+                                              color: widget
+                                                  .selectedMood
+                                                  .lightColor
+                                                  .withOpacity(0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(16.r),
+                                              border: Border.all(
+                                                color: widget
+                                                    .selectedMood
+                                                    .accentColor
+                                                    .withOpacity(0.3),
+                                              ),
+                                            ),
+                                            child: Column(
+                                              children: [
+                                                Text(
+                                                  'Bengali | বাংলা',
+                                                  style: TextStyle(
+                                                    color: widget
+                                                        .selectedMood
+                                                        .accentColor,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 12.sp,
+                                                  ),
+                                                ),
+                                                SizedBox(height: 12.h),
+                                                Text(
+                                                  quote['bengali']!,
+                                                  style: TextStyle(
+                                                    color: AppTheme.whiteText,
+                                                    height: 1.6,
+                                                    fontSize: 14.sp,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+
+                                          // English Quote
+                                          if (quote['english']!.isNotEmpty) ...[
+                                            SizedBox(height: 18.h),
+                                            Container(
+                                              width: double.infinity,
+                                              padding: EdgeInsets.all(18.w),
+                                              decoration: BoxDecoration(
+                                                color: widget
+                                                    .selectedMood
+                                                    .darkColor
+                                                    .withOpacity(0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(16.r),
+                                                border: Border.all(
+                                                  color: widget
+                                                      .selectedMood
+                                                      .accentColor
+                                                      .withOpacity(0.3),
+                                                ),
+                                              ),
+                                              child: Column(
+                                                children: [
+                                                  Text(
+                                                    'English',
+                                                    style: TextStyle(
+                                                      color: widget
+                                                          .selectedMood
+                                                          .accentColor,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 12.sp,
+                                                    ),
+                                                  ),
+                                                  SizedBox(height: 12.h),
+                                                  Text(
+                                                    quote['english']!,
+                                                    style: TextStyle(
+                                                      color: AppTheme.whiteText,
+                                                      height: 1.6,
+                                                      fontSize: 14.sp,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+
+                                          SizedBox(height: 16.h),
+
+                                          // Reference
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                '- ${quote['reference']}',
+                                                style: TextStyle(
+                                                  color: AppTheme.whiteText
+                                                      .withOpacity(0.7),
+                                                  fontStyle: FontStyle.italic,
+                                                  fontSize: 10.sp,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
-                            );
-                          },
-                        ),
                       ),
                     ),
 
@@ -399,7 +527,9 @@ class _QuotesScreenState extends State<QuotesScreen> {
                               ],
                             ),
                             child: ElevatedButton.icon(
-                              onPressed: previousQuote,
+                              onPressed: allQuotes.isNotEmpty
+                                  ? previousQuote
+                                  : null,
                               icon: Icon(Icons.arrow_back_ios, size: 16.sp),
                               label: Text(
                                 'Previous',
@@ -433,7 +563,9 @@ class _QuotesScreenState extends State<QuotesScreen> {
                               ],
                             ),
                             child: ElevatedButton.icon(
-                              onPressed: nextQuote,
+                              onPressed: allQuotes.isNotEmpty
+                                  ? nextQuote
+                                  : null,
                               icon: Icon(Icons.arrow_forward_ios, size: 16.sp),
                               label: Text(
                                 'Next',

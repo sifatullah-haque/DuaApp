@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'services/appwrite_service.dart';
-import 'screens/home_screen.dart';
+import 'screens/splash.dart';
 import 'constants/theme.dart';
 
 void main() {
@@ -27,7 +27,7 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           title: 'Dua App',
           theme: AppTheme.lightTheme,
-          home: const HomeScreen(),
+          home: const SplashScreen(),
           debugShowCheckedModeBanner: false,
         );
       },
