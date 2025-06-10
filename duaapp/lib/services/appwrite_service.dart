@@ -167,7 +167,7 @@ class AppwriteService {
           'reference': reference,
           'moodIds': moodIds,
           'status': 'pending', // Set default status
-          'userEmail': user.email,
+          // Removed 'userEmail' since it's not in the collection schema
           // Removed 'createdAt' since Appwrite handles this automatically with $createdAt
         },
         permissions: [
@@ -368,7 +368,12 @@ class AppwriteService {
       return 'User with this email already exists';
     } else if (error.contains('400') &&
         error.contains('document_invalid_structure')) {
-      return 'Database structure error. Please contact support.';
+      return 'Database structure error. Please check your collection attributes in Appwrite console.';
+    } else if (error.contains('Unknown attribute')) {
+      // Extract the unknown attribute name from the error
+      final match = RegExp(r'Unknown attribute: "(.*?)"').firstMatch(error);
+      final attributeName = match?.group(1) ?? 'unknown';
+      return 'Database error: The attribute "$attributeName" is not configured in your collection. Please add it in Appwrite console.';
     } else if (error.contains('invalid-password') ||
         (error.contains('password') && error.contains('length'))) {
       return 'Password must be at least 8 characters';
