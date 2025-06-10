@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../constants/theme.dart';
 import '../models/mood.dart';
@@ -15,6 +16,19 @@ class QuotesScreen extends StatefulWidget {
 class _QuotesScreenState extends State<QuotesScreen> {
   int currentQuoteIndex = 0;
   PageController pageController = PageController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Set status bar to be completely transparent
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.light,
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -61,6 +75,11 @@ class _QuotesScreenState extends State<QuotesScreen> {
           title: Text('${widget.selectedMood.name} Quotes'),
           backgroundColor: Colors.transparent,
           elevation: 0,
+          systemOverlayStyle: const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarBrightness: Brightness.dark,
+            statusBarIconBrightness: Brightness.light,
+          ),
         ),
         extendBodyBehindAppBar: true,
         body: SizedBox.expand(

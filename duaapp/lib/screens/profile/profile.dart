@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:appwrite/models.dart';
 import '../../constants/theme.dart';
@@ -19,6 +20,13 @@ class _ProfileState extends State<Profile> {
   @override
   void initState() {
     super.initState();
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.light,
+      ),
+    );
     _loadUserData();
   }
 
@@ -78,6 +86,11 @@ class _ProfileState extends State<Profile> {
         title: const Text('Profile'),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarBrightness: Brightness.dark,
+          statusBarIconBrightness: Brightness.light,
+        ),
         actions: [
           IconButton(icon: const Icon(Icons.logout), onPressed: _handleLogout),
         ],
