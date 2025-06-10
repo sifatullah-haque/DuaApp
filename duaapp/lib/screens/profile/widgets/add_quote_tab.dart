@@ -32,6 +32,9 @@ class _AddQuoteTabState extends State<AddQuoteTab> {
   }
 
   Future<void> _submitQuote() async {
+    // Hide keyboard when submit button is pressed
+    FocusScope.of(context).unfocus();
+
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedMoodIds.isEmpty) {

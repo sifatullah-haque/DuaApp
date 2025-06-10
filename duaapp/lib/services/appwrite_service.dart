@@ -289,6 +289,7 @@ class AppwriteService {
         collectionId: quotesCollectionId,
         queries: [
           Query.search('moodIds', moodId),
+          Query.equal('status', 'approved'), // Only get approved quotes
           Query.orderDesc('\$createdAt'),
         ],
       );

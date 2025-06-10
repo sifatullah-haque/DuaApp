@@ -75,15 +75,18 @@ class _QuotesScreenState extends State<QuotesScreen> {
       });
     }
 
-    // Add approved user quotes
+    // Add only approved user quotes
     for (UserQuote userQuote in userQuotes) {
-      combined.add({
-        'type': 'user',
-        'arabic': userQuote.arabicText ?? '',
-        'bengali': userQuote.bengaliText,
-        'english': userQuote.englishText ?? '',
-        'reference': userQuote.reference,
-      });
+      // Only include approved quotes
+      if (userQuote.status == 'approved') {
+        combined.add({
+          'type': 'user',
+          'arabic': userQuote.arabicText ?? '',
+          'bengali': userQuote.bengaliText,
+          'english': userQuote.englishText ?? '',
+          'reference': userQuote.reference,
+        });
+      }
     }
 
     setState(() {
