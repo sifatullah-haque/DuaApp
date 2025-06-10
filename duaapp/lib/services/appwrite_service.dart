@@ -4,6 +4,8 @@ import 'package:dio/dio.dart';
 class AppwriteService {
   static const String endpoint = 'https://fra.cloud.appwrite.io/v1';
   static const String projectId = '68468efc002bf2afb8f4';
+  static const String databaseId = '6847c16600129747707c';
+  static const String quotesCollectionId = '6847c17c003a8fabec6f';
 
   late Client client;
   late Account account;
@@ -144,27 +146,182 @@ class AppwriteService {
     }
   }
 
+  // Quote Management Methods
+  Future<Map<String, dynamic>> createQuote({
+    required String bengaliText,
+    String? arabicText,
+    String? englishText,
+    required String reference,
+    required List<String> moodIds,
+  }) async {
+    try {
+      final user = await account.get();
+      final response = await databases.createDocument(
+        databaseId: databaseId,
+        collectionId: quotesCollectionId,
+        documentId: ID.unique(),
+        data: {
+          'bengaliText': bengaliText,
+          'arabicText': arabicText,
+          'englishText': englishText,
+          'reference': reference,
+          'moodIds': moodIds,
+        },
+        permissions: [
+          Permission.read(Role.user(user.$id)), // Only user can read
+          Permission.update(Role.user(user.$id)), // Only user can update
+          Permission.delete(Role.user(user.$id)), // Only user can delete
+        ],
+      );
+      return {
+        'success': true,
+        'quote': response,
+        'message': 'Quote added successfully',
+      };
+    } catch (e) {
+      print('Create quote error: $e');
+      return {'success': false, 'message': _getErrorMessage(e.toString())};
+    }
+  }
+
+  Future<Map<String, dynamic>> getUserQuotes() async {
+    try {
+      final user = await account.get();
+      final response = await databases.listDocuments(
+        databaseId: databaseId,
+        collectionId: quotesCollectionId,
+        queries: [
+          // Remove userId query since we're using permissions instead
+          Query.orderDesc('\$createdAt'),
+        ],
+      );
+      return {'success': true, 'quotes': response.documents};
+    } catch (e) {
+      print('Get user quotes error: $e');
+      return {'success': false, 'message': _getErrorMessage(e.toString())};
+    }
+  }
+
+  Future<Map<String, dynamic>> updateQuote({
+    required String quoteId,
+    required String bengaliText,
+    String? arabicText,
+    String? englishText,
+    required String reference,
+    required List<String> moodIds,
+  }) async {
+    try {
+      final response = await databases.updateDocument(
+        databaseId: databaseId,
+        collectionId: quotesCollectionId,
+        documentId: quoteId,
+        data: {
+          'bengaliText': bengaliText,
+          'arabicText': arabicText,
+          'englishText': englishText,
+          'reference': reference,
+          'moodIds': moodIds,
+        },
+      );
+      return {
+        'success': true,
+        'quote': response,
+        'message': 'Quote updated successfully',
+      };
+    } catch (e) {
+      print('Update quote error: $e');
+      return {'success': false, 'message': _getErrorMessage(e.toString())};
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteQuote(String quoteId) async {
+    try {
+      await databases.deleteDocument(
+        databaseId: databaseId,
+        collectionId: quotesCollectionId,
+        documentId: quoteId,
+      );
+      return {'success': true, 'message': 'Quote deleted successfully'};
+    } catch (e) {
+      print('Delete quote error: $e');
+      return {'success': false, 'message': _getErrorMessage(e.toString())};
+    }
+  }
+
+  Future<Map<String, dynamic>> updateProfile({
+    required String name,
+    String? firstName,
+    String? lastName,
+    String? phoneNumber,
+  }) async {
+    try {
+      await account.updateName(name: name);
+
+      if (firstName != null || lastName != null || phoneNumber != null) {
+        final currentPrefs = await account.getPrefs();
+        final newPrefs = Map<String, dynamic>.from(currentPrefs.data);
+
+        if (firstName != null) newPrefs['firstName'] = firstName;
+        if (lastName != null) newPrefs['lastName'] = lastName;
+        if (phoneNumber != null) newPrefs['phoneNumber'] = phoneNumber;
+
+        await account.updatePrefs(prefs: newPrefs);
+      }
+
+      return {'success': true, 'message': 'Profile updated successfully'};
+    } catch (e) {
+      print('Update profile error: $e');
+      return {'success': false, 'message': _getErrorMessage(e.toString())};
+    }
+  }
+
+  // Get quotes by mood
+  Future<Map<String, dynamic>> getQuotesByMood(String moodId) async {
+    try {
+      final response = await databases.listDocuments(
+        databaseId: databaseId,
+        collectionId: quotesCollectionId,
+        queries: [
+          Query.search('moodIds', moodId),
+          Query.orderDesc('\$createdAt'),
+        ],
+      );
+      return {'success': true, 'quotes': response.documents};
+    } catch (e) {
+      print('Get quotes by mood error: $e');
+      return {'success': false, 'message': _getErrorMessage(e.toString())};
+    }
+  }
+
   String _getErrorMessage(String error) {
     print('Processing error message: $error');
 
-    if (error.contains('Invalid credentials') ||
+    // More specific error handling with explicit error codes
+    if (error.contains('401') || error.contains('Invalid credentials') ||
         error.contains('invalid-credentials')) {
       return 'Invalid email or password';
-    } else if (error.contains('user_already_exists') ||
+    } else if (error.contains('409') || error.contains('user_already_exists') ||
         error.contains('user-already-exists')) {
       return 'User with this email already exists';
-    } else if (error.contains('password')) {
+    } else if (error.contains('400') && error.contains('document_invalid_structure')) {
+      return 'Database structure error. Please contact support.';
+    } else if (error.contains('invalid-password') ||
+              (error.contains('password') && error.contains('length'))) {
       return 'Password must be at least 8 characters';
-    } else if (error.contains('email') || error.contains('invalid-email')) {
+    } else if (error.contains('invalid-email')) {
       return 'Please enter a valid email address';
-    } else if (error.contains('network') ||
-        error.contains('NetworkException')) {
+    } else if (error.contains('network') || error.contains('NetworkException') ||
+              error.contains('connection')) {
       return 'Network error. Please check your connection';
-    } else if (error.contains('user-unauthorized') ||
-        error.contains('unauthorized')) {
+    } else if (error.contains('403') || error.contains('user-unauthorized') ||
+              error.contains('unauthorized')) {
       return 'Authentication service not properly configured';
-    } else if (error.contains('rate-limit')) {
+    } else if (error.contains('429') || error.contains('rate-limit')) {
       return 'Too many attempts. Please try again later';
+    } else if (error.contains('404') || error.contains('not-found')) {
+      return 'Resource not found. Please check your request.';
+    } else if (error.contains('permission-denied') || error.contains('insufficient-permissions')) {
+      return 'You do not have permission to perform this action.';
     }
 
     // Return the actual error for debugging

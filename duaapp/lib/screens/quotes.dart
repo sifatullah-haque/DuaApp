@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../constants/theme.dart';
 import '../models/mood.dart';
+import '../services/appwrite_service.dart';
+import '../models/user_quote.dart';
 
 class QuotesScreen extends StatefulWidget {
   final Mood selectedMood;
@@ -16,6 +18,8 @@ class QuotesScreen extends StatefulWidget {
 class _QuotesScreenState extends State<QuotesScreen> {
   int currentQuoteIndex = 0;
   PageController pageController = PageController();
+  List<UserQuote> userQuotes = [];
+  bool isLoadingUserQuotes = false;
 
   @override
   void initState() {
@@ -28,6 +32,25 @@ class _QuotesScreenState extends State<QuotesScreen> {
         statusBarIconBrightness: Brightness.light,
       ),
     );
+    _loadUserQuotesByMood();
+  }
+
+  Future<void> _loadUserQuotesByMood() async {
+    setState(() {
+      isLoadingUserQuotes = true;
+    });
+
+    final appwrite = AppwriteService();
+    final result = await appwrite.getQuotesByMood(widget.selectedMood.id);
+
+    if (mounted && result['success']) {
+      setState(() {
+        userQuotes = (result['quotes'] as List)
+            .map((quote) => UserQuote.fromMap(quote))
+            .toList();
+        isLoadingUserQuotes = false;
+      });
+    }
   }
 
   @override
