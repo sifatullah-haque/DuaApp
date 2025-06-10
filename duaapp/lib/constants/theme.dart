@@ -420,14 +420,17 @@ class AppTheme {
   // Background Container Widget
   static Widget backgroundContainer({required Widget child}) {
     return Container(
+      width: double.infinity,
+      height: double.infinity,
       decoration: const BoxDecoration(
         image: DecorationImage(
           image: AssetImage('assets/bg.jpg'),
           fit: BoxFit.cover,
-          opacity: 0.3,
         ),
       ),
       child: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,

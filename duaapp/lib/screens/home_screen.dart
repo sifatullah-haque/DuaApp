@@ -2,10 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../constants/theme.dart';
 import '../models/mood.dart';
+import '../services/appwrite_service.dart';
 import 'quotes.dart';
+import 'profile/profile.dart';
+import 'auth/login.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
+
+  Future<void> _handleContributeClick(BuildContext context) async {
+    final appwrite = AppwriteService();
+    final isLoggedIn = await appwrite.isLoggedIn();
+
+    if (context.mounted) {
+      if (isLoggedIn) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const Profile()),
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,72 +38,155 @@ class HomeScreen extends StatelessWidget {
         elevation: 0,
       ),
       extendBodyBehindAppBar: true,
-      body: AppTheme.backgroundContainer(
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header Section - Fixed at top
-              Padding(
-                padding: EdgeInsets.all(16.w),
-                child: Container(
-                  decoration: AppTheme.glassMorphicDecoration,
-                  padding: EdgeInsets.all(20.w),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Select Your Mood',
-                        style: TextStyle(
-                          color: AppTheme.whiteText,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18.sp,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 6.h),
-                      Text(
-                        'اختر مزاجك',
-                        style: TextStyle(
-                          color: AppTheme.goldAccent,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15.sp,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 8.h),
-                      Text(
-                        'Find comfort in Islamic wisdom based on how you feel',
-                        style: TextStyle(
-                          color: AppTheme.whiteText.withOpacity(0.8),
-                          fontSize: 12.sp,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
+      body: SizedBox.expand(
+        child: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/bg.jpg'),
+              fit: BoxFit.cover,
+            ),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppTheme.glassMorphBlack.withOpacity(0.6),
+                  AppTheme.glassMorphBlack.withOpacity(0.7),
+                ],
               ),
-
-              // Mood Grid - Scrollable content
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w),
-                  child: GridView.builder(
-                    padding: EdgeInsets.only(bottom: 20.h),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 1.0,
-                      crossAxisSpacing: 10.w,
-                      mainAxisSpacing: 10.h,
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // Header Section - Fixed at top
+                  Padding(
+                    padding: EdgeInsets.all(16.w),
+                    child: Container(
+                      decoration: AppTheme.glassMorphicDecoration,
+                      padding: EdgeInsets.all(20.w),
+                      child: Column(
+                        children: [
+                          Text(
+                            'Select Your Mood',
+                            style: TextStyle(
+                              color: AppTheme.whiteText,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18.sp,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: 6.h),
+                          Text(
+                            'اختر مزاجك',
+                            style: TextStyle(
+                              color: AppTheme.goldAccent,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15.sp,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            'Find comfort in Islamic wisdom based on how you feel',
+                            style: TextStyle(
+                              color: AppTheme.whiteText.withOpacity(0.8),
+                              fontSize: 12.sp,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
                     ),
-                    itemCount: Mood.allMoods.length,
-                    itemBuilder: (context, index) {
-                      final mood = Mood.allMoods[index];
-                      return _buildMoodCard(context, mood);
-                    },
                   ),
-                ),
+
+                  // Mood Grid - Scrollable content
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.w),
+                      child: GridView.builder(
+                        padding: EdgeInsets.only(bottom: 20.h),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 1.0,
+                          crossAxisSpacing: 10.w,
+                          mainAxisSpacing: 10.h,
+                        ),
+                        itemCount: Mood.allMoods.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index < Mood.allMoods.length) {
+                            final mood = Mood.allMoods[index];
+                            return _buildMoodCard(context, mood);
+                          } else {
+                            return _buildContributionCard(context);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContributionCard(BuildContext context) {
+    return Container(
+      decoration: AppTheme.glassMorphicDecoration,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16.r),
+          onTap: () => _handleContributeClick(context),
+          child: Padding(
+            padding: EdgeInsets.all(16.w),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.edit_note, size: 24.sp, color: AppTheme.goldAccent),
+                SizedBox(height: 6.h),
+                Text(
+                  'Want to help us grow?',
+                  style: TextStyle(
+                    color: AppTheme.whiteText,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.sp,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  'هل تريد مساعدتنا؟',
+                  style: TextStyle(
+                    color: AppTheme.goldAccent,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 10.sp,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  'Contribute quotes',
+                  style: TextStyle(
+                    color: AppTheme.whiteText.withOpacity(0.8),
+                    fontSize: 9.sp,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 4.h),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 10.sp,
+                  color: AppTheme.primaryGreen,
+                ),
+              ],
+            ),
           ),
         ),
       ),

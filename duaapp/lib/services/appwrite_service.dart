@@ -53,12 +53,16 @@ class AppwriteService {
     required String password,
   }) async {
     try {
+      print('Attempting login for email: $email');
       final response = await account.createEmailPasswordSession(
         email: email,
         password: password,
       );
+      print('Login successful');
       return {'success': true, 'message': 'Login successful', 'user': response};
     } catch (e) {
+      print('Login error: $e');
+      print('Error type: ${e.runtimeType}');
       return {'success': false, 'message': _getErrorMessage(e.toString())};
     }
   }
@@ -71,6 +75,8 @@ class AppwriteService {
     required String phoneNumber,
   }) async {
     try {
+      print('Attempting registration for email: $email');
+
       // Create user account
       final response = await account.create(
         userId: ID.unique(),
@@ -78,12 +84,14 @@ class AppwriteService {
         password: password,
         name: '$firstName $lastName',
       );
+      print('User account created successfully');
 
       // Create email session after registration
       await account.createEmailPasswordSession(
         email: email,
         password: password,
       );
+      print('Session created successfully');
 
       // Update user preferences with additional info
       await account.updatePrefs(
@@ -93,6 +101,7 @@ class AppwriteService {
           'phoneNumber': phoneNumber,
         },
       );
+      print('User preferences updated successfully');
 
       return {
         'success': true,
@@ -100,6 +109,8 @@ class AppwriteService {
         'user': response,
       };
     } catch (e) {
+      print('Registration error: $e');
+      print('Error type: ${e.runtimeType}');
       return {'success': false, 'message': _getErrorMessage(e.toString())};
     }
   }
@@ -109,6 +120,7 @@ class AppwriteService {
       await account.deleteSession(sessionId: 'current');
       return {'success': true, 'message': 'Logout successful'};
     } catch (e) {
+      print('Logout error: $e');
       return {'success': false, 'message': _getErrorMessage(e.toString())};
     }
   }
@@ -118,22 +130,44 @@ class AppwriteService {
       final user = await account.get();
       return {'success': true, 'user': user};
     } catch (e) {
+      print('Get current user error: $e');
       return {'success': false, 'message': _getErrorMessage(e.toString())};
     }
   }
 
+  Future<bool> isLoggedIn() async {
+    try {
+      await account.get();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   String _getErrorMessage(String error) {
-    if (error.contains('Invalid credentials')) {
+    print('Processing error message: $error');
+
+    if (error.contains('Invalid credentials') ||
+        error.contains('invalid-credentials')) {
       return 'Invalid email or password';
-    } else if (error.contains('user_already_exists')) {
+    } else if (error.contains('user_already_exists') ||
+        error.contains('user-already-exists')) {
       return 'User with this email already exists';
     } else if (error.contains('password')) {
       return 'Password must be at least 8 characters';
-    } else if (error.contains('email')) {
+    } else if (error.contains('email') || error.contains('invalid-email')) {
       return 'Please enter a valid email address';
-    } else if (error.contains('network')) {
+    } else if (error.contains('network') ||
+        error.contains('NetworkException')) {
       return 'Network error. Please check your connection';
+    } else if (error.contains('user-unauthorized') ||
+        error.contains('unauthorized')) {
+      return 'Authentication service not properly configured';
+    } else if (error.contains('rate-limit')) {
+      return 'Too many attempts. Please try again later';
     }
-    return 'Something went wrong. Please try again';
+
+    // Return the actual error for debugging
+    return 'Error: $error';
   }
 }
